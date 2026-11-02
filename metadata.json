@@ -1,0 +1,6 @@
+{
+  "name": "KitabTrack",
+  "description": "School Textbook Inventory Management System with offline-first tracking, role-based workflows, and sync.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
