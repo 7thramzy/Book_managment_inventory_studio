@@ -27,6 +27,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.QrCode
+import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Button
@@ -64,6 +65,7 @@ import com.example.data.model.AppUser
 import com.example.data.model.Book
 import com.example.ui.components.BookEditDialog
 import com.example.ui.components.BreadcrumbsBar
+import com.example.ui.components.CameraBarcodeScannerDialog
 import com.example.ui.components.LowStockTag
 import com.example.ui.theme.AmberWarning
 import com.example.ui.theme.GreenSuccess
@@ -86,6 +88,7 @@ fun BooksCatalogScreen(
     var showBookDialog by remember { mutableStateOf(false) }
     var bookBeingEdited by remember { mutableStateOf<Book?>(null) }
     var bookToDelete by remember { mutableStateOf<Book?>(null) }
+    var showScanner by remember { mutableStateOf(false) }
 
     // Filter books based on search, stage, and low-stock filter
     val filteredBooks = allBooks.filter { book ->
@@ -125,9 +128,21 @@ fun BooksCatalogScreen(
                         Icon(Icons.Default.Search, contentDescription = null, tint = PrimaryTeal)
                     },
                     trailingIcon = {
-                        if (searchQuery.isNotEmpty()) {
-                            IconButton(onClick = { viewModel.setSearchQuery("") }) {
-                                Icon(Icons.Default.Clear, contentDescription = "مسح")
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            if (searchQuery.isNotEmpty()) {
+                                IconButton(onClick = { viewModel.setSearchQuery("") }) {
+                                    Icon(Icons.Default.Clear, contentDescription = "مسح")
+                                }
+                            }
+                            IconButton(
+                                onClick = { showScanner = true },
+                                modifier = Modifier.testTag("catalog_scan_barcode_icon")
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.QrCodeScanner,
+                                    contentDescription = "مسح باركود بالماسح الضوئي",
+                                    tint = PrimaryTeal
+                                )
                             }
                         }
                     },
@@ -266,6 +281,28 @@ fun BooksCatalogScreen(
                 }
             }
         }
+
+        FloatingActionButton(
+            onClick = { showScanner = true },
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(16.dp)
+                .testTag("catalog_scan_fab"),
+            containerColor = PrimaryTeal,
+            contentColor = Color.White
+        ) {
+            Row(
+                modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Default.QrCodeScanner,
+                    contentDescription = "مسح باركود"
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Text("مسح الباركود", fontWeight = FontWeight.Bold)
+            }
+        }
     }
 
     // Add / Edit Dialog
@@ -309,6 +346,17 @@ fun BooksCatalogScreen(
                     Text("إلغاء")
                 }
             }
+        )
+    }
+
+    if (showScanner) {
+        CameraBarcodeScannerDialog(
+            booksCatalog = allBooks,
+            onBarcodeScanned = { scannedCode ->
+                viewModel.setSearchQuery(scannedCode)
+                showScanner = false
+            },
+            onDismiss = { showScanner = false }
         )
     }
 }

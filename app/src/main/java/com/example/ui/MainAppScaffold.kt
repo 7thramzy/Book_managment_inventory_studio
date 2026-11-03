@@ -31,6 +31,7 @@ import androidx.compose.material.icons.filled.Dashboard
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.ReceiptLong
 import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material.icons.filled.VerifiedUser
@@ -76,6 +77,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.model.InventoryTransaction
+import com.example.ui.components.CameraBarcodeScannerDialog
 import com.example.ui.components.RoleBadge
 import com.example.ui.components.SwitchUserDialog
 import com.example.ui.components.SyncIndicatorBadge
@@ -119,11 +121,14 @@ fun MainAppScaffold(
     val unsyncedCount by inventoryViewModel.unsyncedCount.collectAsState()
     val isSyncing by syncViewModel.isSyncing.collectAsState()
     val activeTxDetail by inventoryViewModel.activeTransactionDetail.collectAsState()
+    val allBooks by inventoryViewModel.allBooks.collectAsState()
+    val allTransactions by inventoryViewModel.allTransactions.collectAsState()
     val successMsg by inventoryViewModel.successMessage.collectAsState()
     val errorMsg by inventoryViewModel.errorMessage.collectAsState()
 
     var currentScreen by remember { mutableStateOf(AppScreen.DASHBOARD) }
     var showUserSwitchDialog by remember { mutableStateOf(false) }
+    var showGlobalScanner by remember { mutableStateOf(false) }
 
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
@@ -328,6 +333,17 @@ fun MainAppScaffold(
                         }
                     },
                     actions = {
+                        IconButton(
+                            onClick = { showGlobalScanner = true },
+                            modifier = Modifier.testTag("global_top_bar_scanner_button")
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.QrCodeScanner,
+                                contentDescription = "الماسح الضوئي العام (QR/Barcode)",
+                                tint = PrimaryTeal
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(2.dp))
                         SyncIndicatorBadge(
                             unsyncedCount = unsyncedCount,
                             isSyncing = isSyncing,
@@ -392,7 +408,8 @@ fun MainAppScaffold(
                         onNavigateToSync = { currentScreen = AppScreen.SYNC },
                         onNavigateToAiAssistant = { currentScreen = AppScreen.AI_ASSISTANT },
                         onSwitchUserClick = { showUserSwitchDialog = true },
-                        onViewTransactionDetail = { txId -> inventoryViewModel.loadTransactionDetail(txId) }
+                        onViewTransactionDetail = { txId -> inventoryViewModel.loadTransactionDetail(txId) },
+                        onOpenScanner = { showGlobalScanner = true }
                     )
 
                     AppScreen.CATALOG -> BooksCatalogScreen(
@@ -466,4 +483,26 @@ fun MainAppScaffold(
             onDismiss = { inventoryViewModel.clearActiveTransactionDetail() }
         )
     }
+
+    // Global QR / Barcode Scanner Modal
+    if (showGlobalScanner) {
+        CameraBarcodeScannerDialog(
+            booksCatalog = allBooks,
+            onBarcodeScanned = { scannedCode ->
+                showGlobalScanner = false
+                val matchedTx = allTransactions.find {
+                    it.transactionNumber.equals(scannedCode, ignoreCase = true) ||
+                    it.transactionNumber.replace("-", "").equals(scannedCode.replace("-", ""), ignoreCase = true)
+                }
+                if (matchedTx != null) {
+                    inventoryViewModel.loadTransactionDetail(matchedTx.id)
+                } else {
+                    currentScreen = AppScreen.CATALOG
+                    inventoryViewModel.setSearchQuery(scannedCode)
+                }
+            },
+            onDismiss = { showGlobalScanner = false }
+        )
+    }
 }
+

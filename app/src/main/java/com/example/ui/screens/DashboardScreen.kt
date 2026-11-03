@@ -32,8 +32,10 @@ import androidx.compose.material.icons.filled.CloudSync
 import androidx.compose.material.icons.filled.Inventory2
 import androidx.compose.material.icons.filled.LocalShipping
 import androidx.compose.material.icons.filled.ReceiptLong
+import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.School
 import androidx.compose.material.icons.filled.Warning
+import com.example.ui.components.StockDistributionCard
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -96,8 +98,10 @@ fun DashboardScreen(
     onNavigateToSync: () -> Unit,
     onNavigateToAiAssistant: () -> Unit,
     onSwitchUserClick: () -> Unit,
-    onViewTransactionDetail: (Long) -> Unit
+    onViewTransactionDetail: (Long) -> Unit,
+    onOpenScanner: () -> Unit = {}
 ) {
+    val allBooks by inventoryViewModel.allBooks.collectAsState()
     val stats by inventoryViewModel.stats.collectAsState()
     val lowStockBooks by inventoryViewModel.lowStockBooks.collectAsState()
     val recentTransactions by inventoryViewModel.recentTransactions.collectAsState()
@@ -288,12 +292,32 @@ fun DashboardScreen(
                             Spacer(modifier = Modifier.width(4.dp))
                             Text("المساعد الذكي", fontSize = 12.sp, fontWeight = FontWeight.Bold)
                         }
+
+                        IconButton(
+                            onClick = onOpenScanner,
+                            modifier = Modifier
+                                .size(42.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(MaterialTheme.colorScheme.surface)
+                                .testTag("quick_scan_button")
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.QrCodeScanner,
+                                contentDescription = "مسح باركود",
+                                tint = PrimaryTeal
+                            )
+                        }
                     }
                 }
             }
         }
 
-        // 5. Low Stock Alert Section (Real-time indicators)
+        // 5. Interactive Stock Distribution Chart (Native Bar & Donut Charts)
+        item {
+            StockDistributionCard(books = allBooks)
+        }
+
+        // 6. Low Stock Alert Section (Real-time indicators)
         if (lowStockBooks.isNotEmpty()) {
             item {
                 Card(

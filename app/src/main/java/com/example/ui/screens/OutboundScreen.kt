@@ -24,8 +24,10 @@ import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Error
+import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.School
 import androidx.compose.material.icons.filled.Warning
+import com.example.ui.components.CameraBarcodeScannerDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -91,6 +93,7 @@ fun OutboundScreen(
     var validationError by remember { mutableStateOf<String?>(null) }
 
     val selectedItems = remember { mutableStateListOf<OutboundItemEntry>() }
+    var showScanner by remember { mutableStateOf(false) }
 
     var bookSelectorExpanded by remember { mutableStateOf(false) }
     var selectedBookForAddition by remember { mutableStateOf<Book?>(null) }
@@ -285,46 +288,69 @@ fun OutboundScreen(
 
                     Spacer(modifier = Modifier.height(12.dp))
 
-                    // Dropdown book selector
-                    ExposedDropdownMenuBox(
-                        expanded = bookSelectorExpanded,
-                        onExpandedChange = { bookSelectorExpanded = !bookSelectorExpanded },
-                        modifier = Modifier.fillMaxWidth()
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        OutlinedTextField(
-                            value = selectedBookForAddition?.let { "${it.titleAr} (الرصيد المتاح: ${it.currentStock})" } ?: "اختر كتاباً للصرف...",
-                            onValueChange = {},
-                            readOnly = true,
-                            label = { Text("الكتاب المراد صرفه") },
-                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = bookSelectorExpanded) },
-                            modifier = Modifier
-                                .menuAnchor()
-                                .fillMaxWidth()
-                                .testTag("select_outbound_book_dropdown")
-                        )
-
-                        ExposedDropdownMenu(
-                            expanded = bookSelectorExpanded,
-                            onDismissRequest = { bookSelectorExpanded = false }
-                        ) {
-                            allBooks.forEach { book ->
-                                DropdownMenuItem(
-                                    text = {
-                                        Column {
-                                            Text(book.titleAr, fontWeight = FontWeight.Bold)
-                                            Text(
-                                                "${book.stage} - الصف ${book.grade} | المتاح بالمخزن: ${book.currentStock} نسخة",
-                                                fontSize = 11.sp,
-                                                color = if (book.currentStock == 0) RedError else MaterialTheme.colorScheme.outline
-                                            )
-                                        }
-                                    },
-                                    onClick = {
-                                        selectedBookForAddition = book
-                                        bookSelectorExpanded = false
-                                    }
+                        Box(modifier = Modifier.weight(1f)) {
+                            // Dropdown book selector
+                            ExposedDropdownMenuBox(
+                                expanded = bookSelectorExpanded,
+                                onExpandedChange = { bookSelectorExpanded = !bookSelectorExpanded },
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                OutlinedTextField(
+                                    value = selectedBookForAddition?.let { "${it.titleAr} (الرصيد المتاح: ${it.currentStock})" } ?: "اختر كتاباً للصرف...",
+                                    onValueChange = {},
+                                    readOnly = true,
+                                    label = { Text("الكتاب المراد صرفه") },
+                                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = bookSelectorExpanded) },
+                                    modifier = Modifier
+                                        .menuAnchor()
+                                        .fillMaxWidth()
+                                        .testTag("select_outbound_book_dropdown")
                                 )
+
+                                ExposedDropdownMenu(
+                                    expanded = bookSelectorExpanded,
+                                    onDismissRequest = { bookSelectorExpanded = false }
+                                ) {
+                                    allBooks.forEach { book ->
+                                        DropdownMenuItem(
+                                            text = {
+                                                Column {
+                                                    Text(book.titleAr, fontWeight = FontWeight.Bold)
+                                                    Text(
+                                                        "${book.stage} - الصف ${book.grade} | المتاح بالمخزن: ${book.currentStock} نسخة",
+                                                        fontSize = 11.sp,
+                                                        color = if (book.currentStock == 0) RedError else MaterialTheme.colorScheme.outline
+                                                    )
+                                                }
+                                            },
+                                            onClick = {
+                                                selectedBookForAddition = book
+                                                bookSelectorExpanded = false
+                                            }
+                                        )
+                                    }
+                                }
                             }
+                        }
+
+                        IconButton(
+                            onClick = { showScanner = true },
+                            modifier = Modifier
+                                .size(52.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(PrimaryTeal.copy(alpha = 0.15f))
+                                .testTag("outbound_scan_barcode_button")
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.QrCodeScanner,
+                                contentDescription = "مسح باركود الكتاب",
+                                tint = PrimaryTeal
+                            )
                         }
                     }
 
@@ -577,5 +603,22 @@ fun OutboundScreen(
                 }
             }
         }
+    }
+
+    if (showScanner) {
+        CameraBarcodeScannerDialog(
+            booksCatalog = allBooks,
+            onBarcodeScanned = { scannedCode ->
+                val matchedBook = allBooks.find {
+                    it.barcode.equals(scannedCode, ignoreCase = true) ||
+                    it.barcode.replace("-", "").equals(scannedCode.replace("-", ""), ignoreCase = true)
+                }
+                if (matchedBook != null) {
+                    selectedBookForAddition = matchedBook
+                }
+                showScanner = false
+            },
+            onDismiss = { showScanner = false }
+        )
     }
 }
